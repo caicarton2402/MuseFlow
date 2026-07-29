@@ -243,7 +243,39 @@ def extract_account_biz(html: bytes) -> str:
     return match.group(1) if match else ""
 
 
+def _extract_js_array(text: str, marker: str) -> str:
+    marker_index = text.find(marker)
+    if marker_index < 0:
+        return ""
+    start = text.find("[", marker_index + len(marker))
+    if start < 0:
+        return ""
+    depth = 0
+    quote = ""
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = ""
+            continue
+        if char in {"'", '"'}:
+            quote = char
+        elif char == "[":
+            depth += 1
+        elif char == "]":
+            depth -= 1
+            if depth == 0:
+                return text[start + 1 : index]
+    return ""
+
+
 def parse_article(html: bytes, article_url: str) -> tuple[str, str, list[dict[str, str]]]:
+    text = html.decode("utf-8", "ignore")
     soup = BeautifulSoup(html, "html.parser")
     title_meta = soup.select_one('meta[property="og:title"]')
     title = (title_meta.get("content", "") if title_meta else "") or (soup.title.string if soup.title else "")
@@ -251,22 +283,37 @@ def parse_article(html: bytes, article_url: str) -> tuple[str, str, list[dict[st
     account_node = soup.select_one("#js_name, .profile_nickname, .rich_media_meta_nickname")
     if account_node:
         account = account_node.get_text(" ", strip=True)
+    if not account:
+        account_match = re.search(r"\bnick_name\s*:\s*(['\"])(.*?)\1", text)
+        if account_match:
+            account = account_match.group(2)
     images: list[dict[str, str]] = []
     seen: set[str] = set()
-    selectors = "#js_content img, .rich_media_content img"
-    for node in soup.select(selectors):
-        raw = node.get("data-src") or node.get("data-original") or node.get("src") or ""
-        raw = urljoin(article_url, raw.strip())
-        if not raw or raw in seen:
-            continue
+
+    def add_image(raw: str, alt: str = "") -> None:
+        raw = urljoin(article_url, raw.strip().replace("\\/", "/").replace("\\u0026", "&"))
+        if not raw or raw in seen or len(images) >= MAX_IMAGES_PER_ARTICLE:
+            return
         try:
             validate_image_url(raw)
         except ValueError:
-            continue
+            return
         seen.add(raw)
-        images.append({"url": raw, "alt": (node.get("alt") or node.get("data-type") or "").strip()[:300]})
-        if len(images) >= MAX_IMAGES_PER_ARTICLE:
-            break
+        images.append({"url": raw, "alt": alt.strip()[:300]})
+
+    selectors = "#js_content img, .rich_media_content img"
+    for node in soup.select(selectors):
+        add_image(
+            node.get("data-src") or node.get("data-original") or node.get("src") or "",
+            node.get("alt") or node.get("data-type") or "",
+        )
+
+    if not images:
+        picture_list = _extract_js_array(text, "picture_page_info_list")
+        for match in re.finditer(r"\bcdn_url\s*:\s*(['\"])(https?://.*?)\1", picture_list):
+            add_image(match.group(2))
+            if len(images) >= MAX_IMAGES_PER_ARTICLE:
+                break
     return title.strip()[:300], account[:120], images
 
 

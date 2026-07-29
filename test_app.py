@@ -54,6 +54,34 @@ class FeatureTests(unittest.TestCase):
         html = b'<script>var biz = "MzExample123==";</script>'
         self.assertEqual(app.extract_account_biz(html), "MzExample123==")
 
+    def test_parse_async_picture_article(self):
+        original = app.is_public_host
+        app.is_public_host = lambda host: True
+        try:
+            html = b'''<meta property="og:title" content="Async article">
+            <script>
+            const data = {
+              nick_name: 'Authorized Account',
+              picture_page_info_list: [
+                {cdn_url: 'https://mmbiz.qpic.cn/a/0?wx_fmt=jpeg', poi_info: []},
+                {cdn_url: 'https://mmbiz.qpic.cn/b/0?wx_fmt=png', format_info: []}
+              ],
+              other_list: [{cdn_url: 'https://mmbiz.qpic.cn/not-article/0'}]
+            };
+            </script>'''
+            title, account, images = app.parse_article(html, "https://mp.weixin.qq.com/s/example")
+            self.assertEqual(title, "Async article")
+            self.assertEqual(account, "Authorized Account")
+            self.assertEqual(
+                [item["url"] for item in images],
+                [
+                    "https://mmbiz.qpic.cn/a/0?wx_fmt=jpeg",
+                    "https://mmbiz.qpic.cn/b/0?wx_fmt=png",
+                ],
+            )
+        finally:
+            app.is_public_host = original
+
 
 class DatabaseTests(unittest.TestCase):
     def setUp(self):
