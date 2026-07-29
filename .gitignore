@@ -1,0 +1,27 @@
+# Local runtime data and imported media
+/data/
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Test/tool caches and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Logs and local editor/OS files
+*.log
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
