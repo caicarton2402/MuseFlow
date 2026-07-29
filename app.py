@@ -32,7 +32,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 
 ARTICLE_HOSTS = {"mp.weixin.qq.com"}
-IMAGE_HOST_SUFFIXES = ("qpic.cn", "qq.com", "weixin.qq.com")
+IMAGE_HOST_SUFFIXES = ("qpic.cn", "qq.com", "weixin.qq.com", "pinimg.com")
 MAX_ARTICLE_BYTES = int(os.getenv("MUSEFLOW_MAX_ARTICLE_BYTES", 12 * 1024 * 1024))
 MAX_IMAGE_BYTES = 15 * 1024 * 1024
 MAX_IMAGES_PER_ARTICLE = 40

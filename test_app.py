@@ -40,6 +40,10 @@ class FeatureTests(unittest.TestCase):
                 app.validate_article_url("https://mp.weixin.qq.com/s/abc"),
                 "https://mp.weixin.qq.com/s/abc",
             )
+            self.assertEqual(
+                app.validate_image_url("https://i.pinimg.com/736x/example.jpg"),
+                "https://i.pinimg.com/736x/example.jpg",
+            )
             for bad in [
                 "http://mp.weixin.qq.com/s/abc",
                 "https://example.com/s/abc",
